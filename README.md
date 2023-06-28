@@ -1,7 +1,7 @@
 # Vartotojų API - CRUD
 
 -   git/Github/readme;
-    -   git - kiekvienas prasmingas pakeitimas atskirame commit'e;
+    -   git - kiekvienas prasmingas pakeitimas atskirame commit'e; 
     -   readme - su pavyzdžiais kaip naudotis jūsų API ir kartu pateikti pavyzdinius gražinamus rezultatus;
 -   nuorodos struktūra `/api/user`;
 -   visos kitos nuorodos gražina `404`; 
