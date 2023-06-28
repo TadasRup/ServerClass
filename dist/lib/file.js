@@ -1,7 +1,26 @@
 import fs from 'fs/promises';
+import fsSync from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const file = {};
+const getNewestFile = (files, path) => {
+    let out = [];
+    files.forEach(function (file) {
+        var stats = fsSync.statSync(path + "/" + file);
+        if (stats.isFile()) {
+            out.push({ "file": file, "mtime": stats.mtime.getTime() });
+        }
+    });
+    out.sort(function (a, b) {
+        return b.mtime - a.mtime;
+    });
+    return (out.length > 0) ? out[0].file : "";
+};
+file.lastFile = async (dir) => {
+    const path = file.fullPath(dir, '');
+    console.log(getNewestFile(await fs.readdir(path), path));
+    return file.read(dir, getNewestFile(await fs.readdir(path), path));
+};
 /**
  * Sugeneruojamas absoliutus kelias iki nurodyto failo.
  * @param {string} dir Reliatyvus kelias iki direktorijos kur laikomi norimi failai, e.g. `/data/users`

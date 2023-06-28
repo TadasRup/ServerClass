@@ -2,12 +2,26 @@ import http, { IncomingMessage, ServerResponse } from 'node:http';
 import { file } from './file.js';
 
 type Server = {
-    init: () => void;
+    init: (api: object) => void;
     // httpServer: typeof http.createServer;
     httpServer: any;
+    api: object;
+    readBody: (req: IncomingMessage) => Promise<string>
 }
 
 const server = {} as Server;
+
+server.readBody = async (req: IncomingMessage) => {
+    let body = "";
+    return new Promise((resolve, reject) => {
+        req.on('data', function(chunk) {
+            body += chunk;
+        });
+        req.on('end', function() {
+            resolve(body);
+        });
+    });
+}
 
 server.httpServer = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const socket = req.socket as any;
@@ -61,7 +75,7 @@ server.httpServer = http.createServer(async (req: IncomingMessage, res: ServerRe
             'cache-control': `max-age=60`,
         });
         if (err) {
-            responseContent = msg;
+            responseContent = '404';
         } else {
             responseContent = msg;
         }
@@ -81,7 +95,30 @@ server.httpServer = http.createServer(async (req: IncomingMessage, res: ServerRe
     }
 
     if (isAPI) {
-        responseContent = 'API DUOMENYS';
+        const controllerName = trimmedPath.replace('api/', '').match(/([a-z\-]+)\/{0,1}(.*)/);
+        const controller = server.api[controllerName[1]] || null;
+        const param = controllerName[2] || null;
+        let data = null;
+        let msg = 'Not found';
+
+        if (controller !== null) {
+            if (httpMethod === 'get' && param !== null) {
+                [data, msg] = await controller.get(param);
+            } else if (httpMethod ===  'post' && param === null) {
+                [data, msg] = await controller.create(JSON.parse(await server.readBody(req)));
+            } else if (httpMethod === 'put' && param !== null) {
+                data = controller.update(param);
+            }
+        }
+
+        res.writeHead(!data ? 404 : 200, {
+            'Content-Type': MIMES.json,
+        });
+
+        responseContent = data instanceof Object ? JSON.stringify(data) : JSON.stringify({
+            status: data ? true : false,
+            message: msg
+        });
     }
 
     if (isPage) {
@@ -104,9 +141,10 @@ server.httpServer = http.createServer(async (req: IncomingMessage, res: ServerRe
     return res.end(responseContent);
 });
 
-server.init = () => {
+server.init = (api: object) => {
+    server.api = api;
     server.httpServer.listen(4410, () => {
-        console.log('Serveris sukasi ant http://localhost:4415');
+        console.log('Serveris sukasi  ant http://localhost:4410');
     });
 };
 

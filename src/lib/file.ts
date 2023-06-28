@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import fsSync from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,9 +12,31 @@ type File = {
     readPublicBinary: (trimmedFilePath: string) => Promise<[boolean, string | Buffer]>;
     update: (dir: string, fileName: string, content: any) => Promise<[boolean, string | Error]>;
     delete: (dir: string, fileName: string) => Promise<[boolean, string | Error]>;
+    lastFile: (dir: string) => Promise<[boolean, string | Error]>
 }
 
 const file = {} as File;
+
+const getNewestFile = (files: Array<string>, path: string) => {
+    let out = [];
+    files.forEach(function(file) {
+        var stats = fsSync.statSync(path +  "/" +file);
+        if(stats.isFile()) {
+            out.push({"file":file, "mtime": stats.mtime.getTime()});
+        }
+    });
+    out.sort(function(a,b) {
+        return b.mtime - a.mtime;
+    })
+    
+    return (out.length>0) ? out[0].file : "";
+}
+
+file.lastFile = async (dir: string): Promise<[boolean, string | Error]> => {
+    const path = file.fullPath(dir,  '');
+    console.log(getNewestFile(await fs.readdir(path),  path));
+    return file.read(dir, getNewestFile(await fs.readdir(path),  path));
+};
 
 /**
  * Sugeneruojamas absoliutus kelias iki nurodyto failo.

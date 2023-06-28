@@ -1,4 +1,5 @@
 import { server } from "./lib/server.js";
+import { user, userByEmail } from "./api/user.js";
 
 console.clear();
 
@@ -16,7 +17,10 @@ app.init = () => {
     // - pasiruosti struktura
     // - surasyti pradinius duomenis
     // paleisti serverio logika
-    server.init();
+    server.init({
+        user: user,
+        'user-by-email': userByEmail
+    });
 
     // laike pasikartojantys procesai:
     // - isivalyti nereikalingus failus/info

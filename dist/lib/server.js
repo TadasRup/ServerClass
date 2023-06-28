@@ -1,6 +1,17 @@
 import http from 'node:http';
 import { file } from './file.js';
 const server = {};
+server.readBody = async (req) => {
+    let body = "";
+    return new Promise((resolve, reject) => {
+        req.on('data', function (chunk) {
+            body += chunk;
+        });
+        req.on('end', function () {
+            resolve(body);
+        });
+    });
+};
 server.httpServer = http.createServer(async (req, res) => {
     const socket = req.socket;
     const encryption = socket.encryption;
@@ -44,7 +55,7 @@ server.httpServer = http.createServer(async (req, res) => {
             'cache-control': `max-age=60`,
         });
         if (err) {
-            responseContent = msg;
+            responseContent = '404';
         }
         else {
             responseContent = msg;
@@ -64,7 +75,29 @@ server.httpServer = http.createServer(async (req, res) => {
         }
     }
     if (isAPI) {
-        responseContent = 'API DUOMENYS';
+        const controllerName = trimmedPath.replace('api/', '').match(/([a-z\-]+)\/{0,1}(.*)/);
+        const controller = server.api[controllerName[1]] || null;
+        const param = controllerName[2] || null;
+        let data = null;
+        let msg = 'Not found';
+        if (controller !== null) {
+            if (httpMethod === 'get' && param !== null) {
+                [data, msg] = await controller.get(param);
+            }
+            else if (httpMethod === 'post' && param === null) {
+                [data, msg] = await controller.create(JSON.parse(await server.readBody(req)));
+            }
+            else if (httpMethod === 'put' && param !== null) {
+                data = controller.update(param);
+            }
+        }
+        res.writeHead(!data ? 404 : 200, {
+            'Content-Type': MIMES.json,
+        });
+        responseContent = data instanceof Object ? JSON.stringify(data) : JSON.stringify({
+            status: data ? true : false,
+            message: msg
+        });
     }
     if (isPage) {
         let fileResponse = await file.read('../pages', trimmedPath + '.html');
@@ -81,9 +114,10 @@ server.httpServer = http.createServer(async (req, res) => {
     }
     return res.end(responseContent);
 });
-server.init = () => {
+server.init = (api) => {
+    server.api = api;
     server.httpServer.listen(4410, () => {
-        console.log('Serveris sukasi ant http://localhost:4415');
+        console.log('Serveris sukasi  ant http://localhost:4410');
     });
 };
 export { server };
