@@ -15,3 +15,8 @@
 .btn:hover{
     background-color: red;
 }
+
+.main-title{
+    font-size: 30rem;
+    color: blue;
+}
